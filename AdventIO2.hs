@@ -10,6 +10,5 @@ processToken token lists = case lists of
 parseLinesIntoListListInts :: [String] -> [[Integer]]
 parseLinesIntoListListInts tokens = foldr processToken [] tokens
 
-
 readListListInts :: IO [[Integer]]
 readListListInts = getContents >>= return . parseLinesIntoListListInts . lines 

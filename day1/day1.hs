@@ -3,7 +3,7 @@
 import Data.List (sortBy)
 import Data.Ord (comparing, Down(..))
 
-import AdventIO2 (readListListInts)
+import AdventIO3 (readListListInts)
 
 day1 :: [[Integer]] -> Integer
 day1 = sum . take 3 . sortBy (comparing Down) . map sum
