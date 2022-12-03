@@ -12,5 +12,4 @@ day1 n = sum . take n . sortBy (comparing Down) . map sum
 main :: IO ()
 main = do
     args <- getArgs
-    let n = if null args then 1 else 3
-    getContents >>= print . (day1 n) . parseBlocks read
+    getContents >>= print . day1 (if null args then 1 else 3) . parseBlocks read

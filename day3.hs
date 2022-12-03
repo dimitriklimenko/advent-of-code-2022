@@ -38,6 +38,6 @@ day3Part2 = sum . map (priority . single . part2Overlap)
 main :: IO ()
 main = do
     args <- getArgs
-    getContents >>= if null args
-        then print . day3Part1 . parseBlock id
-        else print . day3Part2 . parseGroups 3 id
+    getContents >>= print . if null args
+        then day3Part1 . parseBlock id
+        else day3Part2 . parseGroups 3 id
