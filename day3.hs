@@ -1,23 +1,23 @@
 #!/usr/bin/env runhaskell
 
 import System.Environment (getArgs)
-import Data.Set (Set, empty, fromList, intersection, size, toList)
+import Data.CharSet (CharSet, empty, fromList, intersection, size, toList)
 
 import Utils (parseBlock, parseGroups)
 
-overlap :: [Set Char] -> Set Char
+overlap :: [CharSet] -> CharSet
 overlap []     = empty
 overlap [x]    = x
 overlap (x:xs) = x `intersection` overlap xs
 
-part1Overlap :: String -> Set Char
+part1Overlap :: String -> CharSet
 part1Overlap rucksack = fromList a `intersection` fromList b
     where (a, b) = splitAt (length rucksack `div` 2) rucksack
 
-part2Overlap :: [String] -> Set Char
+part2Overlap :: [String] -> CharSet
 part2Overlap = overlap . map fromList
 
-single :: Set Char -> Char
+single :: CharSet -> Char
 single x
     | size x == 1 = head $ toList x
     | otherwise   = error "wrong # of duplicate items"
