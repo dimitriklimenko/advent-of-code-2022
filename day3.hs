@@ -2,7 +2,6 @@
 
 import System.Environment (getArgs)
 import Data.Set (Set, empty, fromList, intersection, size, toList)
-import Data.List.Split (chunksOf)
 
 import Utils (parseBlock, parseGroups)
 
