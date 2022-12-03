@@ -2,45 +2,69 @@
 
 import Data.List.Split
 
-import AdventIO (parseBlock)
+import Utils (parseBlock, splitPair)
 
-data Move = Rock | Paper | Scissors
-    deriving (Eq, Read, Show)
 
-readYou :: String -> Move
-readYou "X" = Rock
-readYou "Y" = Paper
-readYou "Z" = Scissors
+data Shape = Rock | Paper | Scissors
+    deriving (Eq, Show)
 
-readOpponent :: String -> Move
-readOpponent "A" = Rock
-readOpponent "B" = Paper
-readOpponent "C" = Scissors
+readShape :: String -> Shape
+readShape "A" = Rock
+readShape "B" = Paper
+readShape "C" = Scissors
+readShape "X" = Rock
+readShape "Y" = Paper
+readShape "Z" = Scissors
 
-parseWords :: [String] -> (Move, Move)
-parseWords [a, b] = (readOpponent a, readYou b)
-
-shapeScore :: Move -> Integer
+shapeScore :: Shape -> Integer
 shapeScore Rock     = 1
 shapeScore Paper    = 2
 shapeScore Scissors = 3
 
-counter :: Move -> Move
-counter Rock     = Paper
-counter Paper    = Scissors
-counter Scissors = Rock
 
-outcomeScore :: (Move, Move) -> Integer
-outcomeScore (opp, you)
-    | you == counter opp    = 6
-    | you == opp            = 3
-    | otherwise             = 0
+data Outcome = Loss | Draw | Win
+    deriving (Eq, Show)
 
-scoreRound :: (Move, Move) -> Integer
-scoreRound (opp, you) = shapeScore you + outcomeScore (opp, you)
+readOutcome :: String -> Outcome
+readOutcome "X" = Loss
+readOutcome "Y" = Draw
+readOutcome "Z" = Win
 
-day2 :: [(Move, Move)] -> Integer
-day2 = sum . map scoreRound
+shapeForOutcome :: Outcome -> Shape -> Shape
+shapeForOutcome Win   Rock        = Paper
+shapeForOutcome Win   Paper       = Scissors
+shapeForOutcome Win   Scissors    = Rock
+shapeForOutcome Draw opp          = opp
+shapeForOutcome Loss   Rock       = Scissors
+shapeForOutcome Loss   Paper      = Rock
+shapeForOutcome Loss   Scissors   = Paper
+
+outcome :: (Shape, Shape) -> Outcome
+outcome (opp, you)
+    | you == shapeForOutcome Win opp    = Win
+    | you == opp                        = Draw
+    | otherwise                         = Loss
+
+outcomeScore :: Outcome -> Integer
+outcomeScore Loss = 0
+outcomeScore Draw = 3
+outcomeScore Win  = 6
+
+
+scoreRound :: (Shape, Shape) -> Integer
+scoreRound (opp, you) = shapeScore you + outcomeScore (outcome (opp, you))
+
+parsePart1 :: (String, String) -> (Shape, Shape)
+parsePart1 (a, b) = (readShape a, readShape b)
+
+parsePart2 :: (String, String) -> (Shape, Shape)
+parsePart2 (a, b) =
+    let opp = readShape a
+        outcome = readOutcome b
+    in (opp, shapeForOutcome outcome opp)
+
+day2 :: [(String, String)] -> Integer
+day2 = sum . map (scoreRound . parsePart2)
 
 main :: IO ()
-main = getContents >>= print . day2 . parseBlock (parseWords . words)
+main = getContents >>= print . day2 . parseBlock splitPair
