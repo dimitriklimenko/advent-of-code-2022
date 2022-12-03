@@ -1,14 +1,22 @@
 #!/usr/bin/env runhaskell
 
 import System.Environment (getArgs)
-import Data.Set (Set, fromList, intersection, size, toList)
+import Data.Set (Set, empty, fromList, intersection, size, toList)
+import Data.List.Split (chunksOf)
 
-import Utils (parseBlock)
+import Utils (parseBlock, parseGroups)
 
-overlap :: String -> Set Char
-overlap rucksack =
-    let (a, b) = splitAt (length rucksack `div` 2) rucksack
-    in fromList a `intersection` fromList b
+overlap :: [Set Char] -> Set Char
+overlap []     = empty
+overlap [x]    = x
+overlap (x:xs) = x `intersection` overlap xs
+
+part1Overlap :: String -> Set Char
+part1Overlap rucksack = fromList a `intersection` fromList b
+    where (a, b) = splitAt (length rucksack `div` 2) rucksack
+
+part2Overlap :: [String] -> Set Char
+part2Overlap = overlap . map fromList
 
 single :: Set Char -> Char
 single x
@@ -21,11 +29,15 @@ priority item
     | otherwise = v - 38
     where v = fromEnum item
 
-day3 :: [String] -> Int
-day3 = sum . map (priority . single . overlap)
+day3Part1 :: [String] -> Int
+day3Part1 = sum . map (priority . single . part1Overlap)
+
+day3Part2 :: [[String]] -> Int
+day3Part2 = sum . map (priority . single . part2Overlap)
 
 main :: IO ()
 main = do
-    -- args <- getArgs
-    -- let parsePair = if null args then parsePart1 else parsePart2
-    getContents >>= print . day3 . parseBlock id
+    args <- getArgs
+    getContents >>= if null args
+        then print . day3Part1 . parseBlock id
+        else print . day3Part2 . parseGroups 3 id
