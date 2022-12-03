@@ -2,11 +2,15 @@
 
 import Data.List (sortBy)
 import Data.Ord (comparing, Down(..))
+import System.Environment (getArgs)
 
-import AdventIO (parseBlocks)
+import Utils (parseBlocks)
 
-day1 :: [[Integer]] -> Integer
-day1 = sum . take 3 . sortBy (comparing Down) . map sum
+day1 :: Int -> [[Integer]] -> Integer
+day1 n = sum . take n . sortBy (comparing Down) . map sum
 
 main :: IO ()
-main = getContents >>= print . day1 . parseBlocks read
+main = do
+    args <- getArgs
+    let n = if null args then 1 else 3
+    getContents >>= print . (day1 n) . parseBlocks read

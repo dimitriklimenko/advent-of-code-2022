@@ -1,6 +1,6 @@
 #!/usr/bin/env runhaskell
 
-import Data.List.Split
+import System.Environment (getArgs)
 
 import Utils (parseBlock, splitPair)
 
@@ -31,13 +31,13 @@ readOutcome "Y" = Draw
 readOutcome "Z" = Win
 
 shapeForOutcome :: Outcome -> Shape -> Shape
-shapeForOutcome Win   Rock        = Paper
-shapeForOutcome Win   Paper       = Scissors
-shapeForOutcome Win   Scissors    = Rock
-shapeForOutcome Draw opp          = opp
-shapeForOutcome Loss   Rock       = Scissors
-shapeForOutcome Loss   Paper      = Rock
-shapeForOutcome Loss   Scissors   = Paper
+shapeForOutcome Win   Rock      = Paper
+shapeForOutcome Win   Paper     = Scissors
+shapeForOutcome Win   Scissors  = Rock
+shapeForOutcome Draw  opp       = opp
+shapeForOutcome Loss  Rock      = Scissors
+shapeForOutcome Loss  Paper     = Rock
+shapeForOutcome Loss  Scissors  = Paper
 
 outcome :: (Shape, Shape) -> Outcome
 outcome (opp, you)
@@ -63,8 +63,11 @@ parsePart2 (a, b) =
         outcome = readOutcome b
     in (opp, shapeForOutcome outcome opp)
 
-day2 :: [(String, String)] -> Integer
-day2 = sum . map (scoreRound . parsePart2)
+day2 :: ((String, String) -> (Shape, Shape)) -> [(String, String)] -> Integer
+day2 parsePair = sum . map (scoreRound . parsePair)
 
 main :: IO ()
-main = getContents >>= print . day2 . parseBlock splitPair
+main = do
+    args <- getArgs
+    let parsePair = if null args then parsePart1 else parsePart2
+    getContents >>= print . day2 parsePair . parseBlock splitPair
