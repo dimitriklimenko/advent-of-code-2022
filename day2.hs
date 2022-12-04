@@ -2,7 +2,7 @@
 
 import System.Environment (getArgs)
 
-import Utils (parseBlock, splitPair)
+import Utils (parseBlock, splitPairOn)
 
 
 data Shape = Rock | Paper | Scissors
@@ -67,4 +67,4 @@ day2 calcShapes = sum . map (scoreRound . calcShapes)
 main :: IO ()
 main = do
     args <- getArgs
-    getContents >>= print . day2 (if null args then calcShapesPart1 else calcShapesPart2) . parseBlock splitPair
+    getContents >>= print . day2 (if null args then calcShapesPart1 else calcShapesPart2) . parseBlock (splitPairOn " ")
