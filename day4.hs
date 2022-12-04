@@ -2,15 +2,15 @@
 
 import System.Environment (getArgs)
 
-import Utils (parseBlock, splitPairOn, mapTuple)
+import Utils (parseBlock, splitPairOn, mapPair)
 
 type Assignment = (Int, Int)
 
 readAssignment :: String -> Assignment
-readAssignment = mapTuple read . splitPairOn "-"
+readAssignment = mapPair read . splitPairOn "-"
 
 parseLine :: String -> (Assignment, Assignment)
-parseLine = mapTuple readAssignment . splitPairOn ","
+parseLine = mapPair readAssignment . splitPairOn ","
 
 hasFullOverlap :: (Assignment, Assignment) -> Bool
 hasFullOverlap ((lo1, hi1), (lo2, hi2)) =
