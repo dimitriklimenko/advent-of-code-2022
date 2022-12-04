@@ -2,7 +2,7 @@
 
 import System.Environment (getArgs)
 
-import Utils (parseBlock, splitPairOn)
+import Utils (parseBlock, splitPairOn, mapPair)
 
 
 data Shape = Rock | Paper | Scissors
@@ -55,7 +55,7 @@ scoreRound :: (Shape, Shape) -> Integer
 scoreRound (opp, you) = shapeScore you + outcomeScore (outcome (opp, you))
 
 calcShapesPart1 :: (String, String) -> (Shape, Shape)
-calcShapesPart1 (a, b) = (readShape a, readShape b)
+calcShapesPart1 = mapPair readShape
 
 calcShapesPart2 :: (String, String) -> (Shape, Shape)
 calcShapesPart2 (a, b) = (opp, shapeForOutcome (readOutcome b) opp)
