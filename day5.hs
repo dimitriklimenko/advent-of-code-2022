@@ -1,14 +1,13 @@
 #!/usr/bin/env runhaskell
 
 import System.Environment (getArgs)
-import Data.Array (array, Array, listArray, elems, (//), (!))
-import Data.Bifunctor (first, bimap)
+import Data.Array (Array, listArray, elems, (//), (!))
+import Data.Bifunctor (bimap)
 import Data.Char (isSpace)
 import Data.List (transpose, dropWhile, splitAt, foldl')
 import Data.List.Split (chunksOf)
-import Data.Maybe (Maybe)
 
-import Utils (parseBlock, splitPairOn, mapPair)
+import Utils (parseBlock, splitPairOn)
 
 type Action = (Int, Int, Int)
 type State = Array Int String
@@ -34,23 +33,20 @@ moveCrate (from, to) state = state // [(from, fs), (to, f:ts)]
     where (f:fs) = state ! from
           ts     = state ! to
 
-moveCrates1 :: State -> Action -> State
-moveCrates1 state (0, from, to) = state
-moveCrates1 state (n, from, to) = moveCrates1 (moveCrate (from, to) state) (n-1, from, to) 
+moveCrates1 :: Action -> State -> State
+moveCrates1 (0, from, to) = id
+moveCrates1 (n, from, to) = moveCrates1 (n-1, from, to) . moveCrate (from, to)
 
-moveCrates2 :: State -> Action -> State
-moveCrates2 state (n, from, to) = state // [(from, f2), (to, f1 ++ ts)]
+moveCrates2 :: Action -> State -> State
+moveCrates2 (n, from, to) state = state // [(from, f2), (to, f1 ++ ts)]
     where (f1, f2) = splitAt n $ state ! from
           ts       = state ! to
 
-processActions :: (State -> Action -> State) -> (State, [Action]) -> State
-processActions moveFunc (state, actions) = foldl' moveFunc state actions
-
-day5 :: (State -> Action -> State) -> (State, [Action]) -> String
-day5 moveFunc = map head . elems . processActions moveFunc
+day5 :: (Action -> State -> State) -> (State, [Action]) -> String
+day5 moveFunc (state, actions) = map head . elems $ foldl' (flip moveFunc) state actions
 
 main :: IO ()
 main = do
     args <- getArgs
-    let moveFunc = (if null args then moveCrates1 else moveCrates2)
+    let moveFunc = if null args then moveCrates1 else moveCrates2
     getContents >>= putStrLn . day5 moveFunc . bimap parseState (parseBlock parseAction) . splitPairOn "\n\n"
