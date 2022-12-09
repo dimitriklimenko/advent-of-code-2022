@@ -30,10 +30,8 @@ listing :: Parsec String () [ListingEntry]
 listing = endBy entry (char '\n')
 
 cmd :: Parsec String () Command
-cmd = do
-    string "$ "
-    try (string "cd " >> CD <$> name <* char '\n')
-        <|> (string "ls\n" >> LS <$> listing)
+cmd = try (string "$ cd " >> CD <$> name <* char '\n')
+    <|> (string "$ ls\n" >> LS <$> listing)
 
 session :: Parsec String () [Command]
 session = many cmd
@@ -66,7 +64,8 @@ processTree combine agg baseValue = snd . helper
             let (sz, combinedValue) = foldr ((\(a, b) (c, d) -> (a+c, combine b d)) . helper) (0, baseValue) nodes
             in (sz, agg sz combinedValue)
 
-data Topped t = Val t | Top deriving (Show, Eq, Ord)
+data Topped t = Val t | Top
+    deriving (Show, Eq, Ord)
 
 maxSize :: Int
 maxSize = 100000
