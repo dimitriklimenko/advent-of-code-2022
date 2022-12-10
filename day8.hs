@@ -1,6 +1,6 @@
 #!/usr/bin/env runhaskell
 
-import Data.Map (Map, empty, foldrWithKey, insert, (!))
+import Data.Map (empty, foldrWithKey, insert)
 import Data.Char (digitToInt)
 import Data.List (transpose, zipWith4)
 import System.Environment (getArgs)
