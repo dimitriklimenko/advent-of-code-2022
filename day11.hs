@@ -1,13 +1,11 @@
 #!/usr/bin/env runhaskell
 
-import Data.Sequence (Seq, adjust', empty, fromList, index, (|>))
-import qualified Data.Sequence as Seq (zipWith)
-
-import GHC.Utils.Misc (ordNub)
 import Data.Either.Combinators (fromRight')
 import Data.Foldable (toList)
 import Data.List (intercalate, sortOn)
 import Data.Ord (Down(..))
+import Data.Sequence (Seq, adjust', empty, fromList, index, zipWith, (|>))
+import GHC.Utils.Misc (ordNub)
 import System.Environment (getArgs)
 import Text.Parsec (Parsec, endBy, many, many1, parse, sepBy, try, (<|>))
 import Text.Parsec.Char (char, digit, newline, noneOf, spaces, string)
@@ -81,17 +79,17 @@ increaseWorry (Times a b) old = getValue old a * getValue old b
 
 -- Applying the test to see where a monkey throws to
 getTarget :: Test -> Int -> Int
-getTarget (Test modulus true false) item =
-    if item `mod` modulus == 0
-    then true
-    else false  
+getTarget (Test modulus trueTarget falseTarget) worry =
+    if worry `mod` modulus == 0
+    then trueTarget
+    else falseTarget  
 
 -- Processing state updates
 inspectAndThrow :: (Int -> Int) -> Monkey -> State -> Int -> State
-inspectAndThrow relief (Monkey _ operation test) (State ms) item =
+inspectAndThrow relief (Monkey _ operation test) (State ms) itemWorry =
     State $ adjust' (\(Monkey items o t) -> Monkey (items |> newWorry) o t) target ms
   where
-    newWorry = relief . increaseWorry operation $ item
+    newWorry = relief . increaseWorry operation $ itemWorry
     target   = getTarget test newWorry
 
 clearItems :: Int -> State -> State
@@ -114,14 +112,14 @@ initCounts (State monkeys) = fromList $ replicate (length monkeys) 0
 simulate :: (Int -> Int) -> Int -> State -> (State, Seq Int)
 simulate relief numRounds initState = foldl (\(state, counts) _ ->
     let (newState, extraCounts) = doRound relief state
-    in (newState, Seq.zipWith (+) counts extraCounts)) (initState, initCounts initState) [1..numRounds]
+    in (newState, Data.Sequence.zipWith (+) counts extraCounts)) (initState, initCounts initState) [1..numRounds]
 
 part1 :: State -> Int
 part1 = product . take 2 . sortOn Down . toList . snd . simulate (`div` 3) 20
 
 part2 :: State -> Int
 part2 state = product . take 2 . sortOn Down . toList . snd . simulate (`mod` sharedModulus) 10000 $ state
-  where sharedModulus = product . ordNub . map (modulus . test) . toList . monkeys $ state
+  where sharedModulus = foldr (lcm . modulus . test) 1 . toList . monkeys $ state
 
 main :: IO ()
 main = do
