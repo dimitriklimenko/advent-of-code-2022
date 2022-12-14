@@ -1,4 +1,4 @@
-module Utils (parseBlock, parseBlocks, parseGroups, splitPairOn, mapPair) where
+module Utils (mapPair, parseBlock, parseBlocks, parseGroups, splitPairOn, tuplify2) where
 
 import Data.List.Split (splitOn, chunksOf)
 
@@ -12,8 +12,8 @@ parseGroups :: Int -> (String -> a) -> String -> [[a]]
 parseGroups n parseLine = chunksOf n . parseBlock parseLine
 
 tuplify2 :: (Show a) => [a] -> (a, a)
-tuplify2 [x,y] = (x, y)
-tuplify2 lst   = error $ "Unexpectedl list size" ++ show lst
+tuplify2 (x:y:_) = (x, y)
+tuplify2 lst     = error $ "Unexpected list size" ++ show lst
 
 splitPairOn :: String -> String -> (String, String)
 splitPairOn separator = tuplify2 . splitOn separator
