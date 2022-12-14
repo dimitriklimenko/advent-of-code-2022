@@ -1,22 +1,18 @@
 #!/usr/bin/env runhaskell
 
 import Data.Char (ord, chr, isLower)
-import Data.Either.Combinators (fromRight')
-import Data.Set (Set, empty, fromList, singleton, union)
-import Data.Map (Map, empty, insert, member, notMember, (!))
-import Data.Tuple.Extra (uncurry3)
-import GHC.Utils.Misc (ordNub)
+import qualified Data.Set as Set (Set, empty, fromList, singleton, union)
+import qualified Data.Map as Map (Map, empty, insert, member, notMember)
+import Data.Map ((!))
 import System.Environment (getArgs)
-import Text.Parsec (Parsec, char, parse, try, (<|>))
-import Data.List (genericDrop)
 
 type Pos = (Int, Int)
 
 data Square = Start {height :: Int} | End {height :: Int} | Other {height :: Int}
     deriving (Show)
 
-type HeightMap = Map Pos Int
-type DistMap = Map Pos Int
+type HeightMap = Map.Map Pos Int
+type DistMap = Map.Map Pos Int
 
 data Grid = Grid
     { heightMap :: HeightMap
@@ -34,40 +30,43 @@ flattenWithIndices :: [[a]] -> [((Int, Int), a)]
 flattenWithIndices xss = concat [[((i, j), s) | (j, s) <- zip [0..] row] | (i, row) <- zip [0..] xss]
 
 parseGrid :: String -> Grid
-parseGrid = makeGrid . foldr combiner (Data.Map.empty, Nothing, Nothing) . flattenWithIndices . map (map parseSquare) . lines
+parseGrid = makeGrid . foldr combine (Map.empty, Nothing, Nothing) . flattenWithIndices . map (map parseSquare) . lines
   where
     makeGrid :: (HeightMap, Maybe Pos, Maybe Pos) -> Grid
-    makeGrid (heights, Just s, Just e) = Grid heights s e
+    makeGrid (heights, Just start, Just end) = Grid heights start end
 
-    addEntry :: (Pos, Square) -> HeightMap -> HeightMap
-    addEntry (p, s) = insert p (height s)
-
-    combiner :: (Pos, Square) -> (HeightMap, Maybe Pos, Maybe Pos) -> (HeightMap, Maybe Pos, Maybe Pos)
-    combiner cell@(p, Start _) (m, _, e) = (addEntry cell m, Just p, e)
-    combiner cell@(p, End _)   (m, s, _) = (addEntry cell m, s,      Just p)
-    combiner cell@(p, Other _) (m, s, e) = (addEntry cell m, s,      e)
+    combine :: (Pos, Square) -> (HeightMap, Maybe Pos, Maybe Pos) -> (HeightMap, Maybe Pos, Maybe Pos)
+    combine cell@(p, Start h) (m, _, e) = (Map.insert p h m, Just p, e)
+    combine cell@(p, End h)   (m, s, _) = (Map.insert p h m, s,      Just p)
+    combine cell@(p, Other h) (m, s, e) = (Map.insert p h m, s,      e)
 
 neighbours :: Pos -> [Pos]
 neighbours (i, j) = [(i-1, j), (i, j-1), (i, j+1), (i+1, j)]
 
+-- Adjacent squares within a reachable height
 nexts :: HeightMap -> Pos -> [Pos]
-nexts hMap p = [p2 | let h1 = hMap ! p, p2 <- neighbours p, member p2 hMap, let h2 = hMap ! p2, h2 - h1 <= 1]
+nexts hMap p = [p' | let h = hMap ! p, p' <- neighbours p, Map.member p' hMap, let h' = hMap ! p', h - h' <= 1]
 
-stepDist :: HeightMap -> Int -> (DistMap, Set Pos) -> (DistMap, Set Pos)
-stepDist hMap dist (m, ps) = foldr (\p1 (m1, pp) -> (
-    insert p1 dist m1, pp `union` Data.Set.fromList [p | p <- nexts hMap p1, notMember p m])) (m, Data.Set.empty) ps
-
-getDistance :: Grid -> Int
-getDistance grid = helper grid 0 (Data.Map.empty, singleton $ startPos grid)
+-- Single step update to DistMap. Takes a height map, current distance, and a pair consisting of the current DistMap
+--  and a set of positions to add at the current distance. Returns an updated DistMap and the next set of positions.
+stepDistMap :: HeightMap -> Int -> (DistMap, Set.Set Pos) -> (DistMap, Set.Set Pos)
+stepDistMap hMap dist (dMap, ps) = foldr combine (dMap, Set.empty) ps
   where
-    helper :: Grid -> Int -> (DistMap, Set Pos) -> Int
-    helper grid@(Grid hMap _ end) currentDist state@(dMap, nextPosns)
-      | member end dMap = dMap ! end
-      | otherwise       = helper grid (currentDist + 1) (stepDist hMap currentDist state)
+    combine :: Pos -> (DistMap, Set.Set Pos) -> (DistMap, Set.Set Pos)
+    combine p (dMap, nextPs) = (Map.insert p dist dMap, nextPs `Set.union` Set.fromList [p' | p' <- nexts hMap p, Map.notMember p' dMap])
+
+-- Recursive solution. Starts at the end cell of the grid, and takes a test for whether or not a cell is a valid start cell.
+getDistance :: (Pos -> Bool) -> Grid -> Int
+getDistance test grid = helper grid 0 (Map.empty, Set.singleton $ endPos grid)
+  where
+    helper :: Grid -> Int -> (DistMap, Set.Set Pos) -> Int
+    helper grid@(Grid hMap start _) currentDist state@(dMap, nextPosns)
+      | any test nextPosns = currentDist
+      | otherwise          = helper grid (currentDist + 1) (stepDistMap hMap currentDist state)
 
 main :: IO ()
 main = do
     args <- getArgs
     grid <- parseGrid <$> getContents
-    let x = getDistance grid
-    print x
+    let startTest = if null args then (== startPos grid) else (\x -> heightMap grid ! x == 0)
+    print . getDistance startTest $ grid
