@@ -3,7 +3,7 @@
 import Data.Either.Combinators (fromRight')
 import Data.List (intercalate)
 import Data.List.HT (mapAdjacent)
-import qualified Data.Map as Map (Map, fromList, insert, keys, lookup)
+import qualified Data.Map as Map (Map, fromList, insert, keys, lookup, toList)
 import Data.Maybe (fromMaybe)
 import GHC.Utils.Misc (last2)
 import System.Environment (getArgs)
@@ -18,10 +18,8 @@ data Tile = Empty | Rock | Sand
 
 data Cave = Cave
     { tileMap :: Map.Map Pos Tile
-    , xMin :: Int
-    , xMax :: Int
-    , yMin :: Int
     , yMax :: Int
+    , hasFloor :: Bool
     }
 
 -- Input data types and parsing
@@ -47,12 +45,19 @@ instance Show Tile where
     show :: Tile -> String
     show tile = [toChar tile]
 
-getTile :: Pos -> Map.Map Pos Tile -> Tile
-getTile pos = fromMaybe Empty . Map.lookup pos
+getTile :: Pos -> Cave -> Tile
+getTile pos@(x, y) (Cave tileMap yMax hasFloor)
+    | hasFloor && y >= yMax = Rock
+    | otherwise             = fromMaybe Empty . Map.lookup pos $ tileMap
+
+isEmpty :: Cave -> Pos -> Bool
+isEmpty cave pos = getTile pos cave == Empty
 
 instance Show Cave where
     show :: Cave -> String
-    show cave = intercalate "\n" [[toChar $ getTile (x, y) (tileMap cave) | x <- [xMin cave .. xMax cave]] | y <- [yMin cave .. yMax cave]]
+    show cave = intercalate "\n" [[toChar $ getTile (x, y) cave | x <- [x1..x2]] | y <- [y1..y2]]
+      where
+        (x1, x2, y1, y2) = bounds cave
 
 -- Building the cave
 makeLine :: Pos -> Pos -> [Pos]
@@ -60,42 +65,42 @@ makeLine (x1, y1) (x2, y2)
     | x1 == x2 = [(x1, y) | y <- [y1, y1 + signum (y2 - y1)..y2]]
     | y1 == y2 = [(x, y1) | x <- [x1, x1 + signum (x2 - x1)..x2]]
 
-buildCave :: [[Pos]] -> Cave
-buildCave posns = Cave (Map.fromList entries) x1 x2 y1 y2
+buildCave :: Bool -> [[Pos]] -> Cave
+buildCave hasFloor posns = Cave (Map.fromList entries) yMax hasFloor
   where
     entries :: [(Pos, Tile)]
     entries = (((500, 0), Empty) :) . (`zip` repeat Rock) . concatMap (concat . mapAdjacent makeLine) $ posns
-    x1      = minimum . map (fst . fst) $ entries
-    x2      = maximum . map (fst . fst) $ entries
-    y1      = minimum . map (snd . fst) $ entries
-    y2      = maximum . map (snd . fst) $ entries
+    yMax = (if hasFloor then 2 else 0) + (maximum . map (snd . fst) $ entries)
 
--- Bounds checking and dropping sand
-isEmpty :: Cave -> Pos -> Bool
-isEmpty (Cave tileMap _ _ _ _) pos = getTile pos tileMap == Empty
+bounds :: Cave -> (Int, Int, Int, Int)
+bounds (Cave tileMap yMax _) = (x1, x2, y1, yMax)
+  where
+    x1 = minimum . map (fst . fst) . Map.toList $ tileMap
+    x2 = maximum . map (fst . fst) . Map.toList $ tileMap
+    y1 = minimum . map (snd . fst) . Map.toList $ tileMap
 
-inBounds :: Cave -> Pos -> Bool
-inBounds (Cave _ x1 x2 y1 y2) (x, y) = x1 <= x && x <= x2 && y1 <= y && y <= y2
-
+-- Dropping sand
 getRestPos :: Cave -> Pos -> Maybe Pos
 getRestPos cave pos@(x, y)
-    | not (inBounds cave pos) = Nothing
+    | not (isEmpty cave pos)  = Nothing
+    | y > yMax cave           = Nothing
     | isEmpty cave (x, y+1)   = getRestPos cave (x, y+1)
     | isEmpty cave (x-1, y+1) = getRestPos cave (x-1, y+1)
     | isEmpty cave (x+1, y+1) = getRestPos cave (x+1, y+1)
     | otherwise               = Just pos
 
 dropSand :: Cave -> (Cave, Bool)
-dropSand cave@(Cave tileMap x1 x2 y1 y2) = case getRestPos cave (500, 0) of
+dropSand cave@(Cave tileMap yMax hasFloor) = case getRestPos cave (500, 0) of
     Nothing  -> (cave, False)
-    Just pos -> (Cave (Map.insert pos Sand tileMap) x1 x2 y1 y2, True)
+    Just pos -> (Cave (Map.insert pos Sand tileMap) yMax hasFloor, True)
 
-simulate :: Cave -> Int
-simulate cave = if cameToRest then 1 + simulate newCave else 0
+simulate :: Cave -> (Cave, Int)
+simulate cave = if cameToRest then (newCave', numSteps + 1) else (newCave, 0)
   where
     (newCave, cameToRest) = dropSand cave
+    (newCave', numSteps)  = simulate newCave
 
 main :: IO ()
 main = do
     args <- getArgs
-    getContents >>= print . simulate . buildCave . fromRight' . parse inputParser ""
+    getContents >>= print . snd. simulate . buildCave (not $ null args) . fromRight' . parse inputParser ""
