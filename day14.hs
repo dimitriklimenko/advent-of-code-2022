@@ -3,7 +3,7 @@
 import Data.Either.Combinators (fromRight')
 import Data.List (intercalate)
 import Data.List.HT (mapAdjacent)
-import qualified Data.Map as Map (Map, fromList, insert, keys, lookup, toList)
+import qualified Data.Map as Map (Map, fromList, insert, keys, lookup)
 import Data.Maybe (fromMaybe)
 import GHC.Utils.Misc (last2)
 import System.Environment (getArgs)
@@ -66,24 +66,24 @@ makeLine (x1, y1) (x2, y2)
     | y1 == y2 = [(x, y1) | x <- [x1, x1 + signum (x2 - x1)..x2]]
 
 buildCave :: Bool -> [[Pos]] -> Cave
-buildCave hasFloor posns = Cave (Map.fromList entries) yMax hasFloor
+buildCave hasFloor paths = Cave (Map.fromList entries) yMax hasFloor
   where
     entries :: [(Pos, Tile)]
-    entries = (((500, 0), Empty) :) . (`zip` repeat Rock) . concatMap (concat . mapAdjacent makeLine) $ posns
-    yMax = (if hasFloor then 2 else 0) + (maximum . map (snd . fst) $ entries)
+    entries = (`zip` repeat Rock) . concatMap (concat . mapAdjacent makeLine) $ paths
+    yMax    = (if hasFloor then 2 else 0) + (maximum . map (snd . fst) $ entries)
 
 bounds :: Cave -> (Int, Int, Int, Int)
 bounds (Cave tileMap yMax _) = (x1, x2, y1, yMax)
   where
-    x1 = minimum . map (fst . fst) . Map.toList $ tileMap
-    x2 = maximum . map (fst . fst) . Map.toList $ tileMap
-    y1 = minimum . map (snd . fst) . Map.toList $ tileMap
+    x1 = minimum . map fst . Map.keys $ tileMap
+    x2 = maximum . map fst . Map.keys $ tileMap
+    y1 = minimum . map snd . Map.keys $ tileMap
 
 -- Dropping sand
 getRestPos :: Cave -> Pos -> Maybe Pos
 getRestPos cave pos@(x, y)
     | not (isEmpty cave pos)  = Nothing
-    | y > yMax cave           = Nothing
+    | y >= yMax cave          = Nothing
     | isEmpty cave (x, y+1)   = getRestPos cave (x, y+1)
     | isEmpty cave (x-1, y+1) = getRestPos cave (x-1, y+1)
     | isEmpty cave (x+1, y+1) = getRestPos cave (x+1, y+1)
@@ -97,8 +97,8 @@ dropSand cave@(Cave tileMap yMax hasFloor) = case getRestPos cave (500, 0) of
 simulate :: Cave -> (Cave, Int)
 simulate cave = if cameToRest then (newCave', numSteps + 1) else (newCave, 0)
   where
-    (newCave, cameToRest) = dropSand cave
-    (newCave', numSteps)  = simulate newCave
+    (newCave,  cameToRest) = dropSand cave
+    (newCave', numSteps)   = simulate newCave
 
 main :: IO ()
 main = do
