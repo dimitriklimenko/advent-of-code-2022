@@ -1,10 +1,6 @@
 #!/usr/bin/env runhaskell
 
-
-
-import Control.Monad.Loops (iterateM_)
 import qualified Data.Map as Map
-import Debug.Trace (trace)
 import System.Environment (getArgs)
 
 -- Basic data types
